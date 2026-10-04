@@ -64,7 +64,7 @@ runtime/          nav, routing, journey, progress log
 capabilities/     versioned engines (simulator, quiz, …) — no content inside
 packs/            versioned content folders + registry.js (the only file edited to publish)
 levels.js         the development ladder; site.js  hero/identity copy
-_build/           authoring sources and specs; not served
+_build/           specs, authoring tools (scenario speed check) and retired sources; not served
 ```
 
 ## Provenance

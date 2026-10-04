@@ -15,7 +15,7 @@ packs carry the pedagogy; the keeper levels up by completing them.
 
 1. Create `packs/<id>/<version>/pack.js` (see an existing pack for the shape and
    `ARCHITECTURE.md` for the contract). Simulator scenario sets must pass the speed check in
-   `_build/`.
+   `node _build/tools/check-scenarios.js`.
 2. Add one line to `packs/registry.js`.
 3. Commit and push — GitHub Pages serves `master`.
 

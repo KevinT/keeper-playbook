@@ -24,9 +24,11 @@ instruction was that the keeper should drive the pressure level himself.
   each frame; the shot cone is ball-to-posts; the covered wedge is the keeper's width projected
   onto the goal line; pressure is a radius around the actual ball carrier. If an overlay would be
   wrong, the authored positions are wrong — fix the positions.
-- **Authored timelines are checked against real-world speeds** (sprint ≈ 9, run ≈ 6.5, driven
-  pass ≈ 24, lofted ball ≈ 14 pitch-units/s) by script before publishing. A play may be
-  simplified; it may not be physically implausible.
+- **Authored timelines are checked against real-world speeds** by script before publishing
+  (`_build/tools/check-scenarios.js`): authoring guides are sprint ≈ 9, run ≈ 6.5, driven pass
+  ≈ 24, lofted ball ≈ 14 pitch-units/s; the hard ceilings are a struck shot or whipped cross
+  (≈ 42 u/s, 30 m/s) and a sprint burst (≈ 13 u/s, 9 m/s). A play may be simplified; it may not
+  be physically implausible.
 - **Every option has an outcome clip**, and a non-best choice always offers "watch the best
   option" from the same frozen frame — the difference between the two clips is the lesson.
 - **No clock by default.** The pressure timer exists in four levels and is switched on by the

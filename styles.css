@@ -268,6 +268,14 @@ h3.block-title {
 .bar { height: 4px; background: var(--ink); overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--pitch); transition: width .4s ease; }
 
+/* ---------- home: identity traits (site.identity) ---------- */
+.identity { border-top: 1px solid var(--line); }
+.identity__inner { padding-top: clamp(40px, 6vw, 72px); padding-bottom: clamp(40px, 6vw, 72px); }
+.identity__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-top: 20px; }
+.identity__item { background: var(--black); padding: 26px 24px; }
+.identity__word { font-size: clamp(36px, 4vw, 56px); line-height: .95; color: var(--pitch); margin-bottom: 12px; }
+.identity__text { color: var(--grey-2); font-size: 16px; line-height: 1.5; max-width: 32ch; }
+
 /* ---------- glyphs ---------- */
 .glyph { display: inline-block; width: 12px; height: 12px; flex: 0 0 auto; vertical-align: -1px; }
 .glyph--lock { fill: var(--grey); stroke: var(--grey); stroke-width: 1.2; }
@@ -397,6 +405,7 @@ h3.block-title {
 a.me__row-meta { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; justify-content: center; }
 .me__row-sub { color: var(--grey); font-size: 13px; }
 .me__empty { color: var(--grey); padding: 18px 0; border-bottom: 1px solid var(--line); }
+.me__empty a { display: inline-block; padding: 12px 0; margin: -12px 0; }
 .settings .field { max-width: 420px; }
 .field__hint { color: var(--grey); font-size: 14px; margin-top: 8px; }
 .check--setting { max-width: 520px; }
