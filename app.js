@@ -14,7 +14,7 @@
   /* Persistence                                                         */
   /* ------------------------------------------------------------------ */
   function blankState() {
-    return { done: {}, quiz: {}, checklist: {}, tree: {}, reviews: {}, ladder: {}, last: null };
+    return { done: {}, quiz: {}, checklist: {}, tree: {}, reviews: {}, ladder: {}, sim: {}, last: null };
   }
   var state = loadState();
 
@@ -311,11 +311,10 @@
     return [blockTitle(b), blockIntro(b), grid];
   };
 
-  renderers.pitch = function (b) {
-    var scenarios = arr(b.scenarios);
+  // Shared half-pitch markings (defensive half; goal at bottom, centre line at top).
+  // Goal centred x=50, y=68. Goal 7.32m on 68m width ≈ 10.8 units wide.
+  function buildPitchSvg() {
     var svg = svgEl('svg', { class: 'pitch-svg', viewBox: '0 0 100 70', role: 'img', 'aria-label': 'Defensive half of the pitch' });
-    // Pitch markings (defensive half; goal at bottom, centre line at top).
-    // Goal centred x=50, y=68. Goal 7.32m on 68m width ≈ 10.8 units wide.
     svg.appendChild(svgEl('rect', { class: 'line', x: 1, y: 1, width: 98, height: 67 }));
     svg.appendChild(svgEl('line', { class: 'line', x1: 1, y1: 1, x2: 99, y2: 1 }));
     svg.appendChild(svgEl('path', { class: 'line', d: 'M 36.5 1 A 13.5 13.5 0 0 0 63.5 1' }));          // centre circle (half)
@@ -324,6 +323,12 @@
     svg.appendChild(svgEl('circle', { class: 'spot', cx: 50, cy: 52, r: .6 }));                         // penalty spot
     svg.appendChild(svgEl('path', { class: 'line', d: 'M 38.9 44 A 13.5 13.5 0 0 1 61.1 44' }));        // the D
     svg.appendChild(svgEl('rect', { class: 'goal', x: 44.6, y: 68, width: 10.8, height: 1.6 }));       // goal
+    return svg;
+  }
+
+  renderers.pitch = function (b) {
+    var scenarios = arr(b.scenarios);
+    var svg = buildPitchSvg();
     var zone = svgEl('polygon', { class: 'zone', points: '' });
     zone.style.display = 'none';
     svg.appendChild(zone);
@@ -372,6 +377,160 @@
     return [blockTitle(b), blockIntro(b), chips, el('div', { class: 'pitch-block' }, [
       el('div', {}, [svg, legend]), note
     ])];
+  };
+
+  /* sim: visual decision simulator.
+     { type:'sim', id, title, intro?, scenarios:[{ id, label, phase?, ball:{x,y}, keeper:{x,y},
+        us:[{x,y,n?}], them:[{x,y,n?}], arrow?:{from:{x,y},to:{x,y}},   // optional ball movement arrow
+        question, options:[{ text, grade:'best'|'ok'|'poor', feedback }] }] }
+     No clock by default. The player can switch on a timer and pick the pressure level. */
+  renderers.sim = function (b, ctx) {
+    var scenarios = arr(b.scenarios);
+    var key = (b.id || ctx.key);
+    var simState = state.sim[key] || (state.sim[key] = { done: {}, best: {} });
+    var LEVELS = [
+      { name: 'No clock', secs: 0, blurb: 'Take your time. Read everything.' },
+      { name: 'Calm', secs: 12, blurb: 'Ball in their half. Time to look.' },
+      { name: 'Pressure', secs: 6, blurb: 'Ball in your half. Decide while it travels.' },
+      { name: 'Match speed', secs: 3, blurb: 'It is happening now. See, decide, go.' }
+    ];
+    var level = 0, order = shuffle(scenarios), idx = 0, run = { best: 0, ok: 0, poor: 0, out: 0 }, timerId = null;
+
+    var svg = buildPitchSvg();
+    var arrow = svgEl('line', { class: 'guide sim-arrow', x1: 0, y1: 0, x2: 0, y2: 0 });
+    arrow.style.display = 'none';
+    svg.appendChild(arrow);
+    var playersG = svgEl('g', {});
+    svg.appendChild(playersG);
+    var ring = svgEl('circle', { class: 'keeper-ring', cx: 50, cy: 62, r: 3 });
+    var keeper = svgEl('circle', { class: 'keeper', cx: 50, cy: 62, r: 1.6 });
+    var ball = svgEl('circle', { class: 'ball', cx: 50, cy: 30, r: 1.1 });
+    svg.appendChild(ring); svg.appendChild(keeper); svg.appendChild(ball);
+
+    var legend = el('div', { class: 'pitch__legend' }, [
+      el('span', {}, [el('i', { class: 'l-ball' }), 'Ball']),
+      el('span', {}, [el('i', { class: 'l-keeper' }), 'You']),
+      el('span', {}, [el('i', { class: 'l-us' }), 'Us']),
+      el('span', {}, [el('i', { class: 'l-them' }), 'Them'])
+    ]);
+    var panel = el('div', { class: 'sim__panel' });
+    var levelChips = el('div', { class: 'chips sim__levels', role: 'group', 'aria-label': 'Pressure level' });
+    var levelBlurb = el('div', { class: 'sim__level-blurb' });
+    var levelEls = [];
+    LEVELS.forEach(function (L, i) {
+      var c = el('button', { class: 'chip' + (i === 0 ? ' is-active' : ''), type: 'button', text: L.name + (L.secs ? ' · ' + L.secs + 's' : '') });
+      c.addEventListener('click', function () { level = i; levelEls.forEach(function (e, j) { e.classList.toggle('is-active', j === i); }); levelBlurb.textContent = L.blurb; });
+      levelEls.push(c); levelChips.appendChild(c);
+    });
+    levelBlurb.textContent = LEVELS[0].blurb;
+    var bar = el('div', { class: 'sim__timer' }, [el('i')]);
+    var barFill = bar.firstChild;
+
+    function drawPlayers(s) {
+      playersG.innerHTML = '';
+      arr(s.us).forEach(function (p) {
+        playersG.appendChild(svgEl('circle', { class: 'sim-us', cx: p.x, cy: p.y, r: 1.5 }));
+        if (p.n) playersG.appendChild(svgLabel(p));
+      });
+      arr(s.them).forEach(function (p) {
+        playersG.appendChild(svgEl('circle', { class: 'sim-them', cx: p.x, cy: p.y, r: 1.5 }));
+        if (p.n) playersG.appendChild(svgLabel(p));
+      });
+      if (s.arrow && s.arrow.from && s.arrow.to) {
+        arrow.setAttribute('x1', s.arrow.from.x); arrow.setAttribute('y1', s.arrow.from.y);
+        arrow.setAttribute('x2', s.arrow.to.x); arrow.setAttribute('y2', s.arrow.to.y);
+        arrow.style.display = '';
+      } else arrow.style.display = 'none';
+      var bx = s.ball ? s.ball.x : 50, by = s.ball ? s.ball.y : 30, kx = s.keeper ? s.keeper.x : 50, ky = s.keeper ? s.keeper.y : 64;
+      ball.setAttribute('cx', bx); ball.setAttribute('cy', by);
+      keeper.setAttribute('cx', kx); keeper.setAttribute('cy', ky);
+      ring.setAttribute('cx', kx); ring.setAttribute('cy', ky);
+    }
+    function svgLabel(p) {
+      var t = svgEl('text', { class: 'sim-label', x: p.x + 2.1, y: p.y + 0.9 });
+      t.textContent = p.n; return t;
+    }
+    function stopTimer() { if (timerId) { clearInterval(timerId); timerId = null; } bar.style.display = 'none'; }
+    function startTimer(onOut) {
+      var secs = LEVELS[level].secs;
+      if (!secs) { bar.style.display = 'none'; return; }
+      bar.style.display = '';
+      var t0 = Date.now();
+      barFill.style.transform = 'scaleX(1)';
+      timerId = setInterval(function () {
+        var left = Math.max(0, 1 - (Date.now() - t0) / (secs * 1000));
+        barFill.style.transform = 'scaleX(' + left + ')';
+        if (left <= 0) { stopTimer(); onOut(); }
+      }, 50);
+    }
+    function renderScenario() {
+      var s = order[idx];
+      drawPlayers(s);
+      panel.innerHTML = '';
+      panel.appendChild(el('div', { class: 'quiz__counter' }, [
+        el('div', { class: 'eyebrow', text: (s.phase ? s.phase + ' · ' : '') + 'Scenario ' + (idx + 1) + ' / ' + order.length }),
+        el('div', { class: 'quiz__score', text: simState.done[s.id] ? 'Seen before' : '' })
+      ]));
+      panel.appendChild(el('div', { class: 'sim__label', text: text(s.label) }));
+      panel.appendChild(el('div', { class: 'quiz__situation', html: text(s.question) }));
+      var opts = el('div', { class: 'quiz__opts' }), optEls = [];
+      var options = arr(s.options);
+      options.forEach(function (o, i) {
+        var btn = el('button', { class: 'quiz__opt', type: 'button' }, [
+          el('span', { class: 'quiz__opt-key', text: String.fromCharCode(65 + i) }),
+          el('span', { html: text(o.text) })
+        ]);
+        btn.addEventListener('click', function () { answer(o, i, false); });
+        optEls.push(btn); opts.appendChild(btn);
+      });
+      panel.appendChild(opts);
+      startTimer(function () { answer(null, -1, true); });
+
+      function answer(o, i, timedOut) {
+        stopTimer();
+        var grade = timedOut ? 'out' : (o.grade || 'poor');
+        run[grade]++;
+        simState.done[s.id] = true;
+        if (grade === 'best') simState.best[s.id] = true;
+        saveState();
+        optEls.forEach(function (be, j) {
+          be.disabled = true;
+          var g = options[j].grade;
+          be.classList.toggle('is-correct', g === 'best');
+          be.classList.toggle('is-chosen', j === i);
+          be.classList.toggle('is-wrong', j === i && g !== 'best');
+          be.classList.toggle('is-dim', j !== i && g !== 'best');
+        });
+        var bestOpt = options.filter(function (x) { return x.grade === 'best'; })[0];
+        var verdict = timedOut ? 'No decision — that\u2019s the one that always loses' : grade === 'best' ? 'Best option' : grade === 'ok' ? 'Playable — but there was better' : 'Not this one';
+        var fb = el('div', { class: 'quiz__feedback' + (grade === 'best' ? ' is-correct' : '') }, [
+          el('div', { class: 'quiz__verdict', text: verdict }),
+          timedOut ? el('div', { class: 'quiz__fb-text', text: 'The clock ran out. A late decision and no decision cost the same. Read the picture faster: ball, runner, space.' }) : el('div', { class: 'quiz__fb-text', html: text(o.feedback) }),
+          grade !== 'best' && bestOpt ? el('div', { class: 'quiz__reveal', html: 'Best option: <strong>' + text(bestOpt.text) + '</strong>' + (bestOpt.feedback ? ' — ' + text(bestOpt.feedback) : '') }) : null,
+          el('button', { class: 'btn btn--primary', type: 'button', text: idx + 1 < order.length ? 'Next scenario' : 'See how you did', onclick: next })
+        ]);
+        panel.appendChild(fb);
+        fb.querySelector('button').focus();
+      }
+    }
+    function next() { idx++; if (idx < order.length) renderScenario(); else renderSummary(); }
+    function renderSummary() {
+      panel.innerHTML = '';
+      var n = order.length;
+      panel.appendChild(el('div', { class: 'quiz__summary' }, [
+        el('div', { class: 'eyebrow', text: LEVELS[level].name }),
+        el('div', { class: 'quiz__big', html: run.best + '<small> / ' + n + ' best calls</small>' }),
+        el('div', { class: 'quiz__best', text: run.ok + ' playable · ' + run.poor + ' poor' + (run.out ? ' · ' + run.out + ' timed out' : '') }),
+        el('div', { class: 'quiz__best', text: 'Scenarios you\u2019ve nailed at least once: ' + Object.keys(simState.best).length + ' / ' + scenarios.length }),
+        el('button', { class: 'btn btn--primary', type: 'button', text: 'Go again', onclick: function () { order = shuffle(scenarios); idx = 0; run = { best: 0, ok: 0, poor: 0, out: 0 }; renderScenario(); } })
+      ]));
+    }
+    if (!scenarios.length) panel.appendChild(el('p', { class: 'calls__empty', text: 'No scenarios yet.' }));
+    else renderScenario();
+    return [blockTitle(b), blockIntro(b),
+      el('div', { class: 'sim__controls' }, [el('div', { class: 'eyebrow', text: 'Pressure — you choose' }), levelChips, levelBlurb]),
+      bar,
+      el('div', { class: 'pitch-block sim' }, [el('div', {}, [svg, legend]), panel])];
   };
 
   renderers.quiz = function (b, ctx) {

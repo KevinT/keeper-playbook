@@ -522,3 +522,18 @@ h3.block-title {
 .footer__status { flex: 1; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ── SIM (visual decision simulator) ── */
+.sim__controls { margin-bottom: 18px; }
+.sim__controls .eyebrow { margin-bottom: 10px; }
+.sim__level-blurb { color: var(--grey); font-size: 14px; margin-top: 10px; }
+.sim__timer { height: 4px; background: var(--ink); margin-bottom: 18px; overflow: hidden; display: none; }
+.sim__timer i { display: block; height: 100%; background: var(--pitch); transform-origin: left; transform: scaleX(1); }
+.sim__label { font-family: var(--f-display); font-size: 28px; text-transform: uppercase; line-height: 1; margin: 6px 0 12px; color: var(--pitch); }
+.pitch-svg .sim-us { fill: var(--white); fill-opacity: .85; }
+.pitch-svg .sim-them { fill: #f43f5e; }
+.pitch-svg .sim-label { fill: rgba(255,255,255,.7); font-size: 2.6px; font-family: var(--f-head); font-weight: 700; }
+.pitch-svg .sim-arrow { stroke: var(--white); stroke-dasharray: 1.5 1; opacity: .7; }
+.pitch__legend .l-us { background: var(--white); opacity: .85; }
+.pitch__legend .l-them { background: #f43f5e; }
+@media (max-width: 800px) { .sim .pitch-svg { max-width: 420px; margin: 0 auto; } }
