@@ -3,9 +3,15 @@
 var S = [];
 var META = {
   title: "Keeper Playbook",
-  headline: ["Read the game.", "Run the box."],
-  tagline: "A gameplay and strategy guide for a goalkeeper who already has the technique — and wants to understand the game well enough to control it.",
-  intro: "<p>You already train the position. This is about <strong>playing</strong> it: where to stand before anything happens, how to see the danger two passes early, when to come and when to stay, what to do with the ball, and — the biggest step at your age — how to run the players in front of you so the shot never comes.</p><p>Work through it in order the first time. After that, use it like a reference: the night before a match, after a game when something went wrong, or when a coach says a word you want to understand better.</p>"
+  headline: ["You see everything.", "Use it."],
+  tagline: "The keeper is the only player who sees the whole game. This is where you learn to read it, decide in it, and run it — one level at a time.",
+  intro: "<p>Every keeper is on a journey through the same questions: <em>Can I do it? When should I do it? Why am I doing it? Can I do it under pressure, every week? Can I make the keepers around me better?</em> Each level answers one. Each pack inside a level is a set of lessons, plays and tests you complete to level up.</p><p>Your coach will tell you where to start. From there the path is yours.</p>",
+  identity: [
+    { word: "Reader", text: "Never surprised. Sees the cross before the winger does." },
+    { word: "Decider", text: "Comes or stays, catches or punches, fast or slow — early, once, fully." },
+    { word: "Voice", text: "Turns what only the keeper can see into what the team does." },
+    { word: "Owner", text: "Good or bad, knows why. No excuses, no hiding, no drama." }
+  ]
 };
 
 S.push({ id: "home", nav: "Home", hero: true, kicker: "", title: "", lede: "", blocks: [] });
@@ -109,7 +115,7 @@ S.push({
       { title: "Setting too late", text: "If your feet are still moving when the ball is struck, you will dive from a bad base and go late. Set is a moment, not a place: it happens the instant the ball <em>could</em> be hit." },
       { title: "Following the ball, not the angle", text: "When the ball moves across the box, moving sideways on the line leaves you square to a ball that is now hitting from an angle. Move in an arc — forward as the ball comes central, back as it goes wide." }
     ] },
-    { type: "prose", html: "<h4>Depth: the trade-off you're always managing</h4><p>Further off your line = better angle against shots and better chance to sweep, but more exposed to chips and lobs and later to crosses. Closer to your line = safer against the lob and the cross, but the shooter sees more goal and the through-ball becomes your defender's problem alone.</p><p>At U13 the common mistake is being too deep, not too high. Most strikers can't reliably chip or lob from distance, and most dangerous moments are balls behind the defence. Err towards being higher, especially when the ball is far away — and work back towards your goal as the ball comes closer.</p>" },
+    { type: "prose", html: "<h4>Depth: the trade-off you're always managing</h4><p>Further off your line = better angle against shots and better chance to sweep, but more exposed to chips and lobs and later to crosses. Closer to your line = safer against the lob and the cross, but the shooter sees more goal and the through-ball becomes your defender's problem alone.</p><p>At this level the common mistake is being too deep, not too high. Most strikers can't reliably chip or lob from distance, and most dangerous moments are balls behind the defence. Err towards being higher, especially when the ball is far away — and work back towards your goal as the ball comes closer.</p>" },
     { type: "callout", title: "The arc", html: "<p>Picture a curved line from one post, out to about the penalty spot, and back to the other post. As the ball moves across the pitch, you move along that arc, always on the ball-to-centre-of-goal line. Central ball = top of the arc, furthest out. Wide ball = down near the post. Moving along the arc keeps your angle right without you having to think about it.</p>" },
     { type: "quiz", title: "Positioning check", intro: "Read the situation, pick the best answer. There's a good reason behind every option — including the wrong ones.", items: [
       { situation: "The ball is with their centre-back on the halfway line. Your defenders are holding a line around the edge of your box. Where are you?", options: [
@@ -291,7 +297,7 @@ S.push({
   id: "organising", nav: "Running the Team", kicker: "Section 06", title: "Running the Team",
   lede: "You see everything. Nobody else on the pitch does. A keeper who turns what he sees into clear instructions prevents more goals than any keeper who just saves shots. This is the section that raises your bar.",
   blocks: [
-    { type: "prose", html: "<p>Here's the thing most young keepers don't realise: the defenders in front of you are often guessing. They have their back to the goal, an attacker in their face, and no idea where the runner behind them is. <strong>You know.</strong> You can see the runner, the gap in the line, the winger ghosting into the back post, the full-back who's been dragged out. If you say nothing, that knowledge is worthless. If you say the right thing early, the danger never becomes a shot.</p><p>Organising is a skill with technique, exactly like diving. It has a method, it can be practised, and at your age it is the single biggest thing that separates keepers who get noticed from keepers who don't.</p>" },
+    { type: "prose", html: "<p>Here's the thing most young keepers don't realise: the defenders in front of you are often guessing. They have their back to the goal, an attacker in their face, and no idea where the runner behind them is. <strong>You know.</strong> You can see the runner, the gap in the line, the winger ghosting into the back post, the full-back who's been dragged out. If you say nothing, that knowledge is worthless. If you say the right thing early, the danger never becomes a shot.</p><p>Organising is a skill with technique, exactly like diving. It has a method, it can be practised, and at this level it is the single biggest thing that separates keepers who get noticed from keepers who don't.</p>" },
     { type: "loop", title: "How a good instruction works", steps: [
       { name: "Name", text: "Who it's for. 'Thabo —'. A call without a name is noise; everyone assumes it's for someone else." },
       { name: "Instruction", text: "One verb. 'Step.' 'Drop.' 'Tight.' 'Tuck in.' Not a paragraph — a word they can act on without thinking." },

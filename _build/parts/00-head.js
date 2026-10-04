@@ -3,9 +3,15 @@
 var S = [];
 var META = {
   title: "Keeper Playbook",
-  headline: ["Read the game.", "Run the box."],
-  tagline: "A gameplay and strategy guide for a goalkeeper who already has the technique — and wants to understand the game well enough to control it.",
-  intro: "<p>You already train the position. This is about <strong>playing</strong> it: where to stand before anything happens, how to see the danger two passes early, when to come and when to stay, what to do with the ball, and — the biggest step at your age — how to run the players in front of you so the shot never comes.</p><p>Work through it in order the first time. After that, use it like a reference: the night before a match, after a game when something went wrong, or when a coach says a word you want to understand better.</p>"
+  headline: ["You see everything.", "Use it."],
+  tagline: "The keeper is the only player who sees the whole game. This is where you learn to read it, decide in it, and run it — one level at a time.",
+  intro: "<p>Every keeper is on a journey through the same questions: <em>Can I do it? When should I do it? Why am I doing it? Can I do it under pressure, every week? Can I make the keepers around me better?</em> Each level answers one. Each pack inside a level is a set of lessons, plays and tests you complete to level up.</p><p>Your coach will tell you where to start. From there the path is yours.</p>",
+  identity: [
+    { word: "Reader", text: "Never surprised. Sees the cross before the winger does." },
+    { word: "Decider", text: "Comes or stays, catches or punches, fast or slow — early, once, fully." },
+    { word: "Voice", text: "Turns what only the keeper can see into what the team does." },
+    { word: "Owner", text: "Good or bad, knows why. No excuses, no hiding, no drama." }
+  ]
 };
 
 S.push({ id: "home", nav: "Home", hero: true, kicker: "", title: "", lede: "", blocks: [] });
