@@ -96,7 +96,7 @@
   function renderBlock(block, pack, section, index) {
     var type = block && block.type;
     var cap = CAPS[type];
-    var wrap = el('div', { class: 'block block--' + (type || 'unknown') });
+    var wrap = el('div', { class: 'block block--' + (type || 'unknown'), id: block && block.id ? blockElId(pack.id, section.id, block.id) : null });
     if (!cap || typeof cap.render !== 'function') {
       wrap.appendChild(el('div', { class: 'unsupported', html: 'Unsupported block type <code>' + esc(type) + '</code> in section <code>' + esc(pack.id + '/' + section.id) + '</code>.' }));
       return wrap;
@@ -125,11 +125,14 @@
     var i = journey.packList.indexOf(pk);
     return i >= 0 && i + 1 < journey.packList.length ? journey.packList[i + 1] : null;
   }
-  function sectionHref(packId, sectionId) { return '#s/' + packId + '/' + sectionId; }
+  function sectionHref(packId, sectionId, blockId) { return '#s/' + packId + '/' + sectionId + (blockId ? '/' + blockId : ''); }
+  // Continue points outward first: unmet field/drill block -> first incomplete section -> pack page.
   function continueHref(pk) {
     if (!pk) return '#levels';
-    return pk.nextSection ? sectionHref(pk.id, pk.nextSection) : '#pack/' + pk.id;
+    if (pk.nextStep) return sectionHref(pk.id, pk.nextStep.section, pk.nextStep.block);
+    return '#pack/' + pk.id;
   }
+  function blockElId(packId, sectionId, blockId) { return 'blk-' + packId + '--' + sectionId + '--' + blockId; }
   function fmtDate(iso) {
     if (!iso) return '';
     var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
@@ -418,22 +421,36 @@
     });
     inner.appendChild(el('div', { class: 'pack__block' }, [el('div', { class: 'eyebrow', text: 'Steps' }), steps]));
 
-    // Gates
-    var gates = el('ul', { class: 'gates' });
-    pk.gates.forEach(function (g) {
-      gates.appendChild(el('li', { class: 'gate' + (g.pass ? ' is-pass' : '') }, [
-        el('span', { class: 'gate__mark' }, [g.pass ? D.tick() : null]),
-        el('span', { class: 'gate__label', text: g.label }),
-        el('span', { class: 'gate__count', text: g.have + ' / ' + g.need })
-      ]));
-    });
+    // Gates: "On the pitch" (real-world evidence) above "In the Playbook" (content). Both must pass.
+    function gateList(items) {
+      var ul = el('ul', { class: 'gates' });
+      items.forEach(function (g) {
+        ul.appendChild(el('li', { class: 'gate' + (g.pass ? ' is-pass' : '') }, [
+          el('span', { class: 'gate__mark' }, [g.pass ? D.tick() : null]),
+          el('span', { class: 'gate__label', text: g.label }),
+          el('span', { class: 'gate__count', text: g.have + ' / ' + g.need })
+        ]));
+      });
+      return ul;
+    }
+    var pitchGates = pk.gates.filter(function (g) { return g.group === 'pitch'; });
+    var bookGates = pk.gates.filter(function (g) { return g.group !== 'pitch'; });
+    var gatesBox = el('div', { class: 'gategroups' });
+    if (pitchGates.length) gatesBox.appendChild(el('div', { class: 'gategroup gategroup--pitch' }, [
+      el('div', { class: 'gategroup__head' }, [el('h3', { class: 'gategroup__title', text: 'On the pitch' }), el('span', { class: 'gategroup__sub', text: 'Real sessions and matches. This comes first.' })]),
+      gateList(pitchGates)
+    ]));
+    if (bookGates.length) gatesBox.appendChild(el('div', { class: 'gategroup gategroup--book' }, [
+      el('div', { class: 'gategroup__head' }, [el('h3', { class: 'gategroup__title', text: 'In the Playbook' }), el('span', { class: 'gategroup__sub', text: 'Reading, quizzes and the simulator.' })]),
+      gateList(bookGates)
+    ]));
     inner.appendChild(el('div', { class: 'pack__block' }, [
       el('div', { class: 'eyebrow', text: 'What completes this pack' }),
       el('div', { class: 'pack__progress' }, [
         el('div', { class: 'bar', 'aria-hidden': 'true' }, [el('i', { style: 'width:' + pk.pct + '%' })]),
-        el('span', { class: 'pack__pct', text: pk.gatesPassed + ' of ' + pk.gateCount + ' gates · ' + pk.pct + '%' })
+        el('span', { class: 'pack__pct', text: pk.gatesPassed + ' of ' + pk.gateCount + ' gates \u00b7 ' + pk.pct + '%' })
       ]),
-      gates
+      gatesBox
     ]));
 
     if (pk.complete) {
@@ -463,6 +480,7 @@
   function buildSection(pack, s) {
     var sec = el('section', { class: 'section view', id: sectionElId(pack.id, s.id), 'data-pack-id': pack.id, 'data-section-id': s.id });
     sec.appendChild(el('div', { class: 'packbar', 'data-role': 'packbar' }));
+    sec.appendChild(el('div', { class: 'ribbon-wrap', 'data-role': 'ribbon' }));
     sec.appendChild(el('div', { class: 'locked-wrap', 'data-role': 'locked' }));
     var inner = el('div', { class: 'section__inner', 'data-role': 'body' });
     inner.appendChild(el('header', { class: 'section__head' }, [
@@ -495,15 +513,23 @@
     main.insertBefore(sec, document.getElementById('view-me'));
     return sec;
   }
+  function scrollToBlock(packId, sectionId, blockId) {
+    var node = document.getElementById(blockElId(packId, sectionId, blockId));
+    if (!node) return false;
+    var top = node.getBoundingClientRect().top + window.pageYOffset - 84;
+    window.scrollTo(0, Math.max(0, top));
+    return true;
+  }
   // Paint the pack breadcrumb, lock panel, completion toggle and prev/next step buttons.
   function paintSectionFrame(sec) {
     var packId = sec.getAttribute('data-pack-id'), id = sec.getAttribute('data-section-id');
     var pk = packFor(packId), pack = PACK_BY_ID[packId];
     var bar = sec.querySelector('[data-role="packbar"]');
+    var ribbon = sec.querySelector('[data-role="ribbon"]');
     var lockWrap = sec.querySelector('[data-role="locked"]');
     var body = sec.querySelector('[data-role="body"]');
     var nav = sec.querySelector('[data-role="stepnav"]');
-    bar.innerHTML = ''; lockWrap.innerHTML = ''; nav.innerHTML = '';
+    bar.innerHTML = ''; ribbon.innerHTML = ''; lockWrap.innerHTML = ''; nav.innerHTML = '';
     if (!pk || !pack) return;
     var locked = !!(pk.locked && !journey.unlockAll);
     body.style.display = locked ? 'none' : '';
@@ -535,6 +561,18 @@
     }
     var prev = i > 0 ? sectionOf(pack, pk.sections[i - 1]) : null;
     var next = i + 1 < pk.sections.length ? sectionOf(pack, pk.sections[i + 1]) : null;
+    // "Take this to your next session" — this section holds a field/drill block with an unmet gate.
+    var here = sectionOf(pack, id);
+    var fieldBlock = null;
+    arr(here && here.blocks).forEach(function (b) { if (!fieldBlock && J.blockGateUnmet(b, pk.gates)) fieldBlock = b; });
+    if (fieldBlock) {
+      ribbon.appendChild(el('div', { class: 'ribbon' }, [
+        el('div', { class: 'ribbon__inner' }, [
+          el('span', { class: 'ribbon__kicker', text: 'Take this to your next session' }),
+          el('a', { class: 'ribbon__link', href: fieldBlock.id ? sectionHref(pk.id, id, fieldBlock.id) : sectionHref(pk.id, id), text: text(fieldBlock.title || (fieldBlock.type === 'drill' ? 'Drills' : 'Field tasks')) + ' \u2192' })
+        ])
+      ]));
+    }
     if (prev) nav.appendChild(el('a', { class: 'btn btn--ghost', href: sectionHref(pk.id, prev.id), text: '\u2190 ' + text(prev.nav || prev.title) }));
     else nav.appendChild(el('a', { class: 'btn btn--ghost', href: '#pack/' + pk.id, text: '\u2190 Pack' }));
     if (next) nav.appendChild(el('a', { class: 'btn', href: sectionHref(pk.id, next.id), text: text(next.nav || next.title) + ' \u2192' }));
@@ -649,6 +687,45 @@
     if (!revAny && !revBox.children.length) revBox.appendChild(el('div', { class: 'me__empty', text: 'No reviews yet.' }));
     inner.appendChild(el('div', { class: 'me__block' }, [el('div', { class: 'eyebrow', text: 'Match reviews' }), revBox]));
 
+    // On the pitch — field check-ins and drill sessions across every pack. A record, not a score.
+    var pitchEntries = [];
+    var blockTitles = {};
+    eachBlock(function (pack, s, b) {
+      if (b.type === 'field') arr(b.tasks).forEach(function (t) { if (t && t.id) blockTitles['field:' + pack.id + ':' + t.id] = { label: text(t.text), section: s.id, block: b.id }; });
+      if (b.type === 'drill') arr(b.drills).forEach(function (d) { if (d && d.id) blockTitles['drill:' + pack.id + ':' + d.id] = { label: text(d.name), section: s.id, block: b.id }; });
+    });
+    var totalCheckins = 0, totalSessions = 0, allDated = [];
+    PACKS.forEach(function (pack) {
+      R.fieldCheckins(events, pack.id).forEach(function (en) {
+        totalCheckins++; allDated.push(en);
+        var meta = blockTitles['field:' + pack.id + ':' + en.task] || {};
+        pitchEntries.push({ t: en.t, date: en.date, pack: pack, kind: 'field', what: meta.label || en.task, result: en.done, notes: en.notes, section: meta.section, block: meta.block });
+      });
+      R.drillLogs(events, pack.id).forEach(function (en) {
+        totalSessions++; allDated.push(en);
+        var meta = blockTitles['drill:' + pack.id + ':' + en.drill] || {};
+        pitchEntries.push({ t: en.t, date: en.date, pack: pack, kind: 'drill', what: meta.label || en.drill, result: en.rating ? en.rating + '/5' : '', notes: en.notes, section: meta.section, block: meta.block });
+      });
+    });
+    pitchEntries.sort(function (a, b) { return a.date === b.date ? (a.t < b.t ? 1 : -1) : (a.date < b.date ? 1 : -1); });
+    var pitchBox = el('div', { class: 'me__list' });
+    pitchBox.appendChild(el('div', { class: 'me__row me__row--stack me__pitch-totals' }, [
+      el('span', { class: 'me__row-title', text: totalCheckins + ' check-ins \u00b7 ' + totalSessions + ' sessions logged \u00b7 ' + R.distinctDates(allDated) + ' distinct dates' })
+    ]));
+    if (!pitchEntries.length) pitchBox.appendChild(el('div', { class: 'me__empty', text: 'Nothing logged yet. Take a field task to your next session.' }));
+    pitchEntries.slice(0, 10).forEach(function (en) {
+      pitchBox.appendChild(el('div', { class: 'me__row me__pitch' }, [
+        el('span', { class: 'me__pitch-date', text: en.date }),
+        el('span', { class: 'me__pitch-body' }, [
+          el('span', { class: 'me__pitch-pack', text: text(en.pack.title) + ' \u00b7 ' + (en.kind === 'field' ? 'task' : 'drill') }),
+          en.section ? el('a', { class: 'me__pitch-what', href: sectionHref(en.pack.id, en.section, en.block), text: en.what }) : el('span', { class: 'me__pitch-what', text: en.what }),
+          en.notes ? el('span', { class: 'me__pitch-notes', text: en.notes }) : null
+        ]),
+        el('span', { class: 'me__pitch-result', text: en.result })
+      ]));
+    });
+    inner.appendChild(el('div', { class: 'me__block' }, [el('div', { class: 'eyebrow', text: 'On the pitch' }), pitchBox]));
+
     // Settings
     var cfg = R.settings(events);
     var unlock = el('input', { type: 'checkbox', id: 'set-unlock' });
@@ -673,7 +750,7 @@
     view.appendChild(inner);
   }
   function resetProgress() {
-    if (window.confirm('Reset all progress? This clears completed sections, quiz scores, simulator results, checklists, saved reviews and settings.')) {
+    if (window.confirm('Reset all progress? This clears completed sections, quiz scores, simulator results, checklists, saved reviews, field check-ins, drill logs and settings.')) {
       store.clear(); window.location.hash = ''; window.location.reload();
     }
   }
@@ -694,6 +771,8 @@
     if (h === 'pack') return { view: 'pack', id: journey && journey.current ? journey.current.id : null };
     var m = /^pack\/([^/]+)$/.exec(h);
     if (m) return { view: 'pack', id: m[1] };
+    m = /^s\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(h);
+    if (m) return { view: 'section', pack: m[1], id: m[2], block: m[3] };
     m = /^s\/([^/]+)\/([^/]+)$/.exec(h);
     if (m) return { view: 'section', pack: m[1], id: m[2] };
     m = /^s\/([^/]+)$/.exec(h);
@@ -741,6 +820,7 @@
     document.title = (title ? title + ' \u2014 ' : '') + text(SITE.title || 'Keeper Playbook');
     closeDrawer();
     window.scrollTo(0, 0);
+    if (r.view === 'section' && r.block) scrollToBlock(r.pack, r.id, r.block);
   }
   function refreshToggles() {
     document.querySelectorAll('.complete-toggle').forEach(function (btn) {

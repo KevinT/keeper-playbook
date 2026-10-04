@@ -61,13 +61,20 @@
   <script src="capabilities/checklist.js"></script>
   <script src="capabilities/ladder.js"></script>
   <script src="capabilities/review.js"></script>
+  <script src="capabilities/field.js"></script>
+  <script src="capabilities/drill.js"></script>
   <script src="capabilities/simulator.js"></script>
-  <!-- packs: registry, then one line per published pack version (keep in sync with packs/registry.js) -->
+  <!-- packs: the registry is the ONLY place a pack is listed; each entry's pack.js is loaded from it in order -->
   <script src="packs/registry.js"></script>
-  <script src="packs/read-the-game/1.0.0/pack.js"></script>
-  <script src="packs/own-the-box/1.0.0/pack.js"></script>
-  <script src="packs/run-the-team/1.0.0/pack.js"></script>
-  <script src="packs/under-pressure/1.0.0/pack.js"></script>
+  <script>
+    (function () {
+      var reg = (window.KP && window.KP.registry) || [];
+      for (var i = 0; i < reg.length; i++) {
+        if (!reg[i] || !reg[i].path) continue;
+        document.write('<script src="' + String(reg[i].path).replace(/"/g, '') + '"><\/script>');
+      }
+    })();
+  </script>
   <!-- runtime: boot, router, views -->
   <script src="runtime/app.js"></script>
 </body>

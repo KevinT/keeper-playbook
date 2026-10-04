@@ -17,7 +17,19 @@
                                          at pressure >= given, >= min — counted against the
                                          set's OWNING pack (so a `ref` set shares facts)
      { type:'checklist', checklist }     every item of that checklist currently on
-     { type:'reviews', review, min }     live review entries (saved minus deleted) >= min */
+     { type:'reviews', review, min }     live review entries (saved minus deleted) >= min
+     { type:'field', task?, min, distinctDates?, done?:['yes','partly'] }
+                                         live field.checkin events for this pack (optionally one
+                                         task; optionally only those whose `done` is listed);
+                                         count events, or distinct `date`s if distinctDates; >= min
+     { type:'drills', drill?, min, distinctDates? }
+                                         same over drill.logged
+   Field/drill events are stamped with the pack they were emitted in (a block inside pack P
+   records against P), so ownership is the event's `pack` — the same rule `sim` applies to a
+   set's owning pack.
+
+   Gate groups: 'pitch' (field, drills, reviews — real-world evidence) and 'playbook'
+   (sections, quiz, sim, checklist). The pitch group is listed first: it is the priority. */
 (function (root) {
   'use strict';
 
@@ -168,6 +180,38 @@
     });
     return live;
   }
+  // Live (not deleted) dated entries of one event type. `deleted` events carry { id } where id is
+  // the `t` of the entry they remove; `key` is the payload field naming the task/drill.
+  function liveEntries(events, packId, type, key, keyId) {
+    var live = [], index = {};
+    var delType = type + '.deleted';
+    events.forEach(function (e) {
+      if (e.pack !== packId) return;
+      if (keyId !== undefined && keyId !== null && e[key] !== keyId) return;
+      if (e.type === type) {
+        var id = text(e.t);
+        if (index[id] !== undefined) return;                   // duplicate stamp: keep the first
+        var entry = { id: id, t: id, date: text(e.date), notes: text(e.notes), packVersion: e.packVersion || null };
+        entry[key] = e[key];
+        if (type === 'field.checkin') entry.done = text(e.done);
+        if (type === 'drill.logged') entry.rating = num(e.rating, 0);
+        index[id] = live.length; live.push(entry);
+      } else if (e.type === delType) {
+        var i = index[text(e.id)];
+        if (i !== undefined) { live.splice(i, 1); index = {}; live.forEach(function (en, j) { index[en.id] = j; }); }
+      }
+    });
+    return live;
+  }
+  // field.checkin entries for a pack (optionally one task). Oldest first.
+  function fieldCheckins(events, packId, taskId) { return liveEntries(events, packId, 'field.checkin', 'task', taskId); }
+  // drill.logged entries for a pack (optionally one drill). Oldest first.
+  function drillLogs(events, packId, drillId) { return liveEntries(events, packId, 'drill.logged', 'drill', drillId); }
+  function distinctDates(entries) {
+    var seen = {}, n = 0;
+    entries.forEach(function (e) { if (e.date && !seen[e.date]) { seen[e.date] = true; n++; } });
+    return n;
+  }
   function ladderLevel(events, packId, ladderId) {
     var lvl = null;
     events.forEach(function (e) { if (e.type === 'ladder.placed' && e.pack === packId && e.ladder === ladderId) lvl = e.level; });
@@ -238,14 +282,70 @@
         if (!gate.label) g.label = min + ' saved reviews';
         break;
       }
+      case 'field': {
+        min = num(gate.min, 1); g.need = min;
+        var fc = fieldCheckins(events, pack.id, gate.task);
+        if (Array.isArray(gate.done) && gate.done.length) {
+          fc = fc.filter(function (en) { return gate.done.indexOf(en.done) !== -1; });
+        }
+        g.have = gate.distinctDates ? distinctDates(fc) : fc.length;
+        g.pass = g.have >= min;
+        if (!gate.label) {
+          var fWhat = gate.task ? 'Field task ' + text(gate.task) : 'Field tasks';
+          g.label = fWhat + ' — ' + min + (gate.distinctDates ? ' check-ins on different days' : ' check-ins');
+        }
+        break;
+      }
+      case 'drills': {
+        min = num(gate.min, 1); g.need = min;
+        var dl = drillLogs(events, pack.id, gate.drill);
+        g.have = gate.distinctDates ? distinctDates(dl) : dl.length;
+        g.pass = g.have >= min;
+        if (!gate.label) {
+          var dWhat = gate.drill ? 'Drill ' + text(gate.drill) : 'Drills';
+          g.label = dWhat + ' — ' + min + (gate.distinctDates ? ' sessions on different days' : ' sessions logged');
+        }
+        break;
+      }
       default:
         g.label = g.label || ('Unknown gate ' + gate.type);
         g.pass = false;
     }
+    g.group = gateGroup(gate.type);
     return g;
   }
+  var PITCH_GATES = { field: true, drills: true, reviews: true };
+  function gateGroup(type) { return PITCH_GATES[type] ? 'pitch' : 'playbook'; }
+
+  // Does this field/drill block have an unmet gate? A failing `field` gate with no `task`
+  // covers every field block in the pack; with a `task` it covers the block holding that task.
+  // Likewise `drills` / `drill`.
+  function blockGateUnmet(block, gates) {
+    if (!block) return false;
+    var key = block.type === 'field' ? 'tasks' : block.type === 'drill' ? 'drills' : null;
+    if (!key) return false;
+    var gtype = block.type === 'field' ? 'field' : 'drills';
+    var sel = block.type === 'field' ? 'task' : 'drill';
+    var ids = arr(block[key]).map(function (it) { return it && it.id; });
+    return gates.some(function (g) {
+      if (g.pass || g.type !== gtype) return false;
+      var want = g.raw && g.raw[sel];
+      return want === undefined || want === null || ids.indexOf(want) !== -1;
+    });
+  }
+  // The first field/drill block whose gate is unmet, in section order: { section, block } | null.
+  function nextFieldOf(pack, gates) {
+    var secs = arr(pack.sections);
+    for (var i = 0; i < secs.length; i++) {
+      var blocks = arr(secs[i].blocks);
+      for (var j = 0; j < blocks.length; j++) {
+        if (blockGateUnmet(blocks[j], gates)) return { section: secs[i].id, block: blocks[j].id || null, type: blocks[j].type };
+      }
+    }
+    return null;
+  }
   function gatesFor(pack, events, packs) {
-    return arr(pack.gates).map(function (g) { return evalGate(g, pack, events, packs); });
+    return arr(pack.gates).map(function (g) { var r = evalGate(g, pack, events, packs); r.raw = g; return r; });
   }
   function allPass(gates) { return gates.length > 0 && gates.every(function (g) { return g.pass; }); }
 
@@ -305,12 +405,16 @@
         var nextSection = null;
         for (var j = 0; j < sectionIds.length; j++) if (!done[sectionIds[j]]) { nextSection = sectionIds[j]; break; }
         var started = stepsDone > 0 || passed > 0 || events.some(function (e) { return e.pack === P.id; });
+        // Continue points outward first: unmet field/drill block -> first incomplete section -> pack.
+        var nextField = complete ? null : nextFieldOf(P, gates);
+        var nextStep = complete ? null : nextField ? { section: nextField.section, block: nextField.block, why: 'field' }
+          : nextSection ? { section: nextSection, block: null, why: 'section' } : null;
         var pk = {
           id: P.id, version: text(P.version), levelId: L.id, levelN: level.n, levelName: level.name,
           title: text(P.title), tag: text(P.tag), promise: text(P.promise), index: i,
           sections: sectionIds, sectionsDone: done, gates: gates, gatesPassed: passed, gateCount: gates.length,
           pct: gates.length ? Math.round(passed / gates.length * 100) : 0,
-          stepsDone: stepsDone, nextSection: nextSection,
+          stepsDone: stepsDone, nextSection: nextSection, nextField: nextField, nextStep: nextStep,
           state: complete ? 'complete' : open ? 'open' : 'locked',
           complete: complete, open: open, locked: !open && !complete, started: started,
           completedAt: complete ? completedAtOf(P, events, packs) : null
@@ -339,9 +443,13 @@
     findBlock: findBlock,
     satisfies: satisfies,
     cmpVer: cmpVer,
+    gateGroup: gateGroup,
+    blockGateUnmet: blockGateUnmet,
+    nextFieldOf: nextFieldOf,
     reducers: {
       sectionsDone: sectionsDone, quizBest: quizBest, simBestAt: simBestAt, simSeen: simSeen,
-      checklistTicks: checklistTicks, reviewEntries: reviewEntries, ladderLevel: ladderLevel, settings: settings
+      checklistTicks: checklistTicks, reviewEntries: reviewEntries, ladderLevel: ladderLevel, settings: settings,
+      fieldCheckins: fieldCheckins, drillLogs: drillLogs, distinctDates: distinctDates
     }
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
