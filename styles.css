@@ -537,3 +537,54 @@ h3.block-title {
 .pitch__legend .l-us { background: var(--white); opacity: .85; }
 .pitch__legend .l-them { background: #f43f5e; }
 @media (max-width: 800px) { .sim .pitch-svg { max-width: 420px; margin: 0 auto; } }
+
+/* ── SIM motion engine ── */
+/* The static .pitch-svg transitions would fight the rAF loop; the engine drives attributes directly. */
+.pitch-svg--motion .ball, .pitch-svg--motion .keeper, .pitch-svg--motion .keeper-ring, .pitch-svg--motion .guide { transition: none; }
+.sim__stage { position: relative; }
+.sim .sim-ball-shadow { fill: #000; opacity: .45; }
+.sim .sim-decide { fill: none; stroke: var(--pitch); stroke-width: .35; opacity: 0; transform-box: fill-box; transform-origin: center; }
+.sim .sim-decide.is-pulse { animation: sim-decide .5s ease-out 1 forwards; }
+@keyframes sim-decide {
+  0%   { opacity: .9; transform: scale(1); }
+  100% { opacity: 0;  transform: scale(2.6); }
+}
+.sim .sim-offside { stroke: rgba(255,255,255,.4); stroke-width: .3; stroke-dasharray: 1.4 1; }
+.sim .sim-offside-label { fill: rgba(255,255,255,.55); font-size: 2.4px; font-family: var(--f-head); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.sim .sim-cone { fill: var(--pitch); fill-opacity: .12; stroke: var(--pitch); stroke-width: .2; stroke-opacity: .35; }
+.sim .sim-cone-covered { fill: #0a0a0a; fill-opacity: .5; stroke: none; }
+.sim .sim-pressure { fill: #f43f5e; fill-opacity: .1; stroke: #f43f5e; stroke-opacity: .4; stroke-width: .3; }
+.sim .sim-trail { fill: none; stroke-width: .5; stroke-linecap: round; stroke-linejoin: round; opacity: .3; }
+.sim .sim-trail--us { stroke: var(--white); }
+.sim .sim-trail--them { stroke: #f43f5e; }
+.sim .sim-trail--keeper { stroke: var(--pitch); }
+.sim .sim-trail--ball { stroke: var(--white); stroke-width: .35; }
+.sim__cue {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-family: var(--f-head); font-weight: 800; font-size: 13px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--white); background: rgba(10,10,10,.85); border: 1px solid var(--line-strong); padding: 10px 16px;
+  pointer-events: none; white-space: nowrap;
+}
+.sim__badge {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+  font-family: var(--f-display); text-transform: uppercase; letter-spacing: .12em; font-size: clamp(26px, 4vw, 44px); line-height: 1;
+  padding: 10px 22px; background: rgba(10,10,10,.88); border: 2px solid var(--white); color: var(--white);
+  pointer-events: none; white-space: nowrap; opacity: 0;
+}
+.sim__badge.is-shown { animation: sim-badge .2s ease-out 1 forwards; }
+@keyframes sim-badge { from { opacity: 0; } to { opacity: 1; } }
+.sim__badge.is-good { color: var(--pitch); border-color: var(--pitch); }
+.sim__badge.is-bad { color: #f43f5e; border-color: #f43f5e; }
+.sim__badge.is-warn { color: #fbbf24; border-color: #fbbf24; }
+.sim__badge.is-neutral { color: var(--grey-2); border-color: var(--grey); }
+.sim__playbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.sim__caption { color: var(--off-white); font-size: 15px; line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 2px solid var(--line-strong); }
+.sim__caption.is-good { border-top-color: var(--pitch); }
+.sim__caption.is-bad { border-top-color: #f43f5e; }
+.sim__caption.is-warn { border-top-color: #fbbf24; }
+.quiz__opt.is-waiting { opacity: .4; cursor: wait; }
+@media (prefers-reduced-motion: reduce) {
+  .sim .sim-decide.is-pulse { animation: none; opacity: .6; }
+  .sim__badge.is-shown { animation: none; opacity: 1; }
+}
+.sim .pitch-svg { scroll-margin-top: 84px; }
