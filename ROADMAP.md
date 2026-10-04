@@ -2,26 +2,35 @@
 
 Items deliberately not built yet. Each names the design hook that makes it cheap later.
 
-## Server-side progress behind simple auth
-**Problem:** progress lives in one browser's localStorage. New device, new browser, or a cache
-clear puts a keeper back to zero.
-**Hook:** `runtime/progress.js` exposes a store interface (`append`, `all`, `clear`). The
-server-backed store is another implementation of that interface; gates, views and capabilities
-never see the difference. Because the log is append-only facts, sync is a union of events, not a
-merge of state.
-**Shape when built:** tiny API (`GET/POST /events` per keeper), email+password or OAuth
-(Google is what most youth clubs' families already have), local store kept as an offline cache
-that flushes when online.
+## The Goalkeepers Corner node (anchor)
+Where this is going: **one Pi Durable node runs the whole Goalkeepers Corner operation** —
+strategy, admin, coaches, keepers — everyone authenticated as themselves, via the website or a
+chat surface. The Playbook contributes **pack extensions** and the **visual client**; progress is
+a keeper-scoped **document** on the node. Decision and consequences:
+`.about/decisions/0005-one-pi-durable-node-runs-goalkeepers-corner.md`.
+
+What this absorbs (no longer Playbook features):
+- *Server-side progress behind auth* — progress becomes a document on the node; identity is GC's.
+  The `runtime/progress.js` store interface is the seam; browser storage becomes an offline cache.
+- *Coach placement, coach review of a keeper's record, coach pack authoring* — multiplayer on the
+  node with role-scoped tools.
+- *Attention tasks* ("at your next session, notice…") — durable tasks with timers; the agent
+  asks on the night, the keeper answers in chat or on the site.
+
+Open, by design: the chat surface, the auth mechanism, how goalkeeperscorner.co.za and the
+authenticated surfaces converge, and build order. Incremental; the static site stays in service.
+
+## Keep the Playbook node-ready (now)
+- `runtime/journey.js`, `runtime/progress.js` and the pack loader must run in Node as well as the
+  browser: pure functions, CommonJS exports, no browser globals.
+- Pack authoring must stay expressible as both a browser bundle and an extension (sections, tools,
+  tasks). Field-task `prompt`/`why` are the agent's words.
+- A `compile-pack-extension` tool is the first concrete node deliverable from this repo.
 
 ## Progress migration at go-live
 No backwards compatibility is guaranteed until the site is declared live. From that point every
-change to the event schema (`v`) ships with a migration, and pack version bumps keep gates
-accepting events from earlier versions where that is pedagogically right.
-
-## Coach placement & pack authoring
-Today: start level is a setting the keeper changes on a coach's instruction; a pack is a folder
-in git. Later: a coach view that sets placement per keeper (needs the auth layer above), and a
-pack authoring guide so a coach can write "how *we* defend corners" as a pack.
+change to the event/document schema (`v`) ships with a migration, and pack version bumps keep
+gates accepting events from earlier versions where that is pedagogically right.
 
 ## Content ideas queued
 - Mastery grid of simulator scenarios ("today's five" drawn from the weakest).

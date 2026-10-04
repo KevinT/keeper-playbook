@@ -45,9 +45,13 @@ first implementation; a server-backed store is a future implementation of the sa
   pack version where that is pedagogically right.
 - Until the site is declared live, **no backwards compatibility is promised** for the log; from
   that milestone every schema change ships with a migration (`../../ROADMAP.md`).
-- Server-side persistence behind auth is a planned implementation of the store interface, not a
-  redesign.
+- Server-side persistence is delivered by the Goalkeepers Corner node, where the log becomes a
+  keeper-scoped document (`0005-one-pi-durable-node-runs-goalkeepers-corner`); the store
+  interface here is the seam, and browser storage becomes an offline cache.
 
 ## Related
 
 - `0000-three-tiers-runtime-capabilities-packs.md` (capabilities depend on this API)
+
+## Maintenance log
+- 2026-10-04 - k@wetware.works - storage-primacy consequence re-pointed at the GC node (`0005`); the decision itself is unchanged.
