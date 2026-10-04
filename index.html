@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>Keeper Playbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="progress" aria-hidden="true"><div class="progress__fill" id="progress-fill"></div></div>
+
+  <header class="topbar" id="topbar">
+    <a class="wordmark" id="wordmark" href="#">Keeper Playbook</a>
+    <nav class="topnav" id="topnav" aria-label="Sections"></nav>
+    <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+
+  <div class="drawer" id="drawer" aria-hidden="true">
+    <div class="drawer__scrim" id="drawer-scrim"></div>
+    <nav class="drawer__panel" id="drawer-nav" aria-label="Sections"></nav>
+  </div>
+
+  <main id="main" class="main"></main>
+
+  <footer class="footer">
+    <span class="footer__mark" id="footer-mark">Keeper Playbook</span>
+    <span class="footer__status" id="footer-status"></span>
+    <button class="link-btn" id="reset-progress" type="button">Reset progress</button>
+  </footer>
+
+  <script src="content.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
