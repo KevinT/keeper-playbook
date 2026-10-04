@@ -1,0 +1,11 @@
+{
+	"name": "keeper-playbook-node",
+	"private": true,
+	"type": "module",
+	"description": "Generated Pi Durable extensions for the Keeper Playbook packs. See README.md. Regenerate: node _build/tools/compile-pack-extension.js",
+	"scripts": {
+		"generate": "node ../_build/tools/compile-pack-extension.js",
+		"typecheck": "tsc -p tsconfig.json",
+		"example": "node --conditions=source --experimental-strip-types generated/example-harness.ts"
+	}
+}
